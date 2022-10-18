@@ -16,15 +16,16 @@ func NewTweetResponse(rawMessage string) TweetResponse {
 }
 
 func getHashtags(rawMessage string) map[string]int {
-	hashtags := make(map[string]int)
-
 	if !strings.Contains(rawMessage, "#") {
-		return hashtags
+		return make(map[string]int)
 	}
 
-	regex := regexp.MustCompile(`#\w+\b`)
-	matches := regex.FindAllString(rawMessage, -1)
+	matches := regexp.MustCompile(`#\w+\b`).FindAllString(rawMessage, -1)
+	return convertMatchesToMap(matches)
+}
 
+func convertMatchesToMap(matches []string) map[string]int {
+	hashtags := make(map[string]int)
 	for _, v := range matches {
 		if _, ok := hashtags[v]; !ok {
 			hashtags[v] = 1
@@ -34,6 +35,5 @@ func getHashtags(rawMessage string) map[string]int {
 			hashtags[v] = curr
 		}
 	}
-
 	return hashtags
 }
