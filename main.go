@@ -33,26 +33,15 @@ func RunConcurrencyTest() {
 	fmt.Println("Processing completed")
 }
 
-func initiateProcessing(ctx context.Context, wg *sync.WaitGroup, responses chan app.TweetResponse) {
-	skipPause := make(chan interface{}, NumOfClients)
-	for i := 1; i <= NumOfClients; i++ {
-		pid := i
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			app.NewTweetClient(context.WithValue(ctx, "processID", pid)).GetTweetsFromStream(responses, skipPause)
-		}()
-	}
-	wg.Done()
-}
-
 func processResponses(responses chan app.TweetResponse, cancel context.CancelFunc) {
 	receivedTweetNumber := 0
 	hashtags := make(map[string]int)
 
 	for resp := range responses {
 		receivedTweetNumber++
-		hashtags = appendHashtags(hashtags, resp.Hashtags)
+		for k := range resp.Hashtags {
+			hashtags[k] += 1
+		}
 
 		if receivedTweetNumber%10 == 0 {
 			fmt.Println("CURRENT PROGRESS: tweets received =", receivedTweetNumber, ", hashtags =", hashtags)
@@ -67,16 +56,15 @@ func processResponses(responses chan app.TweetResponse, cancel context.CancelFun
 	}
 }
 
-func appendHashtags(current, new map[string]int) map[string]int {
-	for k := range new {
-		if _, ok := current[k]; !ok {
-			current[k] = 1
-		} else {
-			curr := current[k]
-			curr++
-			current[k] = curr
-		}
+func initiateProcessing(ctx context.Context, wg *sync.WaitGroup, responses chan app.TweetResponse) {
+	skipPause := make(chan interface{}, NumOfClients)
+	for i := 1; i <= NumOfClients; i++ {
+		pid := i
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			app.NewTweetClient(context.WithValue(ctx, "processID", pid)).GetTweetsFromStream(responses, skipPause)
+		}()
 	}
-
-	return current
+	wg.Done()
 }
