@@ -11,15 +11,16 @@ import (
 )
 
 type TweetClienter interface {
-	GetTweetsFromStream(responses chan<- TweetResponse) error
+	GetTweetsFromStream(responses chan<- TweetResponse, skipPause chan interface{}) error
 }
 
 const (
 	// enter your bearertoken for the twitter v2 API here
-	BearerToken      = "abc"
-	ApiUrl           = "https://api.twitter.com/2/tweets/sample/stream"
-	MinPauseDuration = 100
-	MaxPauseDuration = 10000
+	BearerToken        = "abc"
+	ApiUrl             = "https://api.twitter.com/2/tweets/sample/stream"
+	MinPauseDuration   = 100
+	MaxPauseDuration   = 10000
+	SkipPauseThreshold = 0.9
 )
 
 type tweetClient struct {
@@ -30,7 +31,7 @@ func NewTweetClient(ctx context.Context) TweetClienter {
 	return &tweetClient{ctx: ctx}
 }
 
-func (tc *tweetClient) GetTweetsFromStream(responses chan<- TweetResponse) error {
+func (tc *tweetClient) GetTweetsFromStream(responses chan<- TweetResponse, skipPause chan interface{}) error {
 	req, err := tc.getRequest()
 	if err != nil {
 		fmt.Println("pID #", tc.ctx.Value("processID"), " - Request error=", err)
@@ -43,7 +44,7 @@ func (tc *tweetClient) GetTweetsFromStream(responses chan<- TweetResponse) error
 		return err
 	}
 
-	return tc.processTweet(reader, responses)
+	return tc.processTweet(reader, responses, skipPause)
 }
 
 func (tc *tweetClient) getRequest() (*http.Request, error) {
@@ -68,7 +69,7 @@ func (tc *tweetClient) getResponse(req *http.Request) (*bufio.Reader, error) {
 	return bufio.NewReader(resp.Body), nil
 }
 
-func (tc *tweetClient) processTweet(reader *bufio.Reader, responses chan<- TweetResponse) error {
+func (tc *tweetClient) processTweet(reader *bufio.Reader, responses chan<- TweetResponse, skipPause chan interface{}) error {
 	numTweetsRetrieved := 0
 	for {
 		line, err := reader.ReadBytes('\n')
@@ -77,7 +78,7 @@ func (tc *tweetClient) processTweet(reader *bufio.Reader, responses chan<- Tweet
 			return err
 		}
 
-		tc.processLine(&numTweetsRetrieved, responses, line)
+		tc.processLine(&numTweetsRetrieved, responses, skipPause, line)
 
 		select {
 		case _ = <-tc.ctx.Done():
@@ -89,11 +90,27 @@ func (tc *tweetClient) processTweet(reader *bufio.Reader, responses chan<- Tweet
 	}
 }
 
-func (tc *tweetClient) processLine(numTweetsRetrieved *int, responses chan<- TweetResponse, line []byte) {
+func (tc *tweetClient) processLine(numTweetsRetrieved *int, responses chan<- TweetResponse, skipPause chan interface{}, line []byte) {
 	(*numTweetsRetrieved)++
 	fmt.Println("pID #", tc.ctx.Value("processID"), " - Retrieving tweet", *numTweetsRetrieved)
 	responses <- NewTweetResponse(string(line))
 
+	tc.pauseProcessing(skipPause)
+}
+
+func (tc *tweetClient) pauseProcessing(skipPause chan interface{}) {
+	select {
+	case _ = <-skipPause:
+		fmt.Println("pID #", tc.ctx.Value("processID"), " - SkipPause message read from the queue.")
+		return
+	default:
+	}
+
 	pauseDuration := rand.Intn(MaxPauseDuration-MinPauseDuration) + MinPauseDuration
+	if pauseDuration >= (SkipPauseThreshold * MaxPauseDuration) {
+		fmt.Println("pID #", tc.ctx.Value("processID"), " - Pause threshold surpassed.  Pushing skipPause message.")
+		skipPause <- true
+	}
+
 	time.Sleep(time.Duration(pauseDuration) * time.Millisecond)
 }
