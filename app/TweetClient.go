@@ -10,10 +10,6 @@ import (
 	"time"
 )
 
-type TweetClienter interface {
-	GetTweetsFromStream(responses chan<- TweetResponse, skipPause chan interface{}) error
-}
-
 const (
 	// enter your bearertoken for the twitter v2 API here
 	BearerToken        = "abc"
@@ -22,6 +18,10 @@ const (
 	MaxPauseDuration   = 10000
 	SkipPauseThreshold = 0.9
 )
+
+type TweetClienter interface {
+	GetTweetsFromStream(responses chan<- TweetResponse, skipPause chan interface{}) error
+}
 
 type tweetClient struct {
 	ctx context.Context
