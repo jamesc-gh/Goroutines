@@ -34,13 +34,13 @@ func NewTweetClient(ctx context.Context) TweetClienter {
 func (tc *tweetClient) GetTweetsFromStream(responses chan<- TweetResponse, skipPause chan interface{}) error {
 	req, err := tc.getRequest()
 	if err != nil {
-		fmt.Println("pID #", tc.ctx.Value("processID"), " - Request error=", err)
+		fmt.Println("pID #", tc.ctx.Value("processID"), " - Request error =", err)
 		return err
 	}
 
 	reader, err := tc.getResponse(req)
 	if err != nil {
-		fmt.Println("pID #", tc.ctx.Value("processID"), " - Response error=", err)
+		fmt.Println("pID #", tc.ctx.Value("processID"), " - Response error =", err)
 		return err
 	}
 
@@ -74,7 +74,7 @@ func (tc *tweetClient) processTweet(reader *bufio.Reader, responses chan<- Tweet
 	for {
 		line, err := reader.ReadBytes('\n')
 		if err != nil {
-			fmt.Println("pID #", tc.ctx.Value("processID"), " - Reader error=", err)
+			fmt.Println("pID #", tc.ctx.Value("processID"), " - Reader error =", err)
 			return err
 		}
 
