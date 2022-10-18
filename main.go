@@ -60,12 +60,11 @@ func processResponses(responses chan app.TweetResponse, cancel context.CancelFun
 
 		if receivedTweetNumber >= MaxTweets {
 			fmt.Println("Maximum number of tweets received.  Ending processing.")
+			fmt.Println("FINAL PROGRESS: tweets received =", receivedTweetNumber, ", hashtags =", hashtags)
 			cancel()
 			break
 		}
 	}
-
-	fmt.Println("FINAL PROGRESS: tweets received =", receivedTweetNumber, ", hashtags =", hashtags)
 }
 
 func appendHashtags(current, new map[string]int) map[string]int {
