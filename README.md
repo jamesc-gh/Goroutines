@@ -1,6 +1,8 @@
 # Goroutines
 Golang concurrency example with the Twitter streaming API, using goroutines, channels (buffered and non-buffered), waitGroups, and context.
 
+Note, that there are certainly more optimal ways to do this processing. I used this approach only for demonstration purposes, to maximize the use of various concurrent programming techniques.
+
 Sample output-
 ```
 go run .
